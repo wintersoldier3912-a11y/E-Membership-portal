@@ -12,6 +12,7 @@ export const getProfile = async (req: AuthRequest, res: Response) => {
     if (!profile) {
       profile = await Profile.create({ 
         memberId,
+        preferredAuthMethod: 'sms',
         preferences: {
           marketingEmails: false,
           smsNotifications: true
@@ -29,7 +30,7 @@ export const getProfile = async (req: AuthRequest, res: Response) => {
 export const updateProfile = async (req: AuthRequest, res: Response) => {
   try {
     const memberId = req.user?.id;
-    const { name, email, bio, preferences } = req.body;
+    const { name, email, bio, avatarUrl, preferredAuthMethod, preferences } = req.body;
     
     // Simple validation
     if (email && !/\S+@\S+\.\S+/.test(email)) {
@@ -48,11 +49,13 @@ export const updateProfile = async (req: AuthRequest, res: Response) => {
       }
     }
 
-    // Build update object to support partial nested updates for preferences
+    // Build update object
     const updateData: any = {};
     if (name !== undefined) updateData.name = name;
     if (email !== undefined) updateData.email = email;
     if (bio !== undefined) updateData.bio = bio;
+    if (avatarUrl !== undefined) updateData.avatarUrl = avatarUrl;
+    if (preferredAuthMethod !== undefined) updateData.preferredAuthMethod = preferredAuthMethod;
     
     if (preferences) {
       if (preferences.marketingEmails !== undefined) {
