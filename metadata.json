@@ -1,0 +1,5 @@
+{
+  "name": "Secure Membership Portal",
+  "description": "A production-grade passwordless membership management system featuring OTP-based authentication via Fast2SMS, secure JWT session management with HttpOnly cookies, and a responsive modern UI.",
+  "requestFramePermissions": []
+}
