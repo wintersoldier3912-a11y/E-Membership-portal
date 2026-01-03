@@ -1,42 +1,81 @@
 
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/authMiddleware';
-import Member from '../models/Member';
+import Profile from '../models/Profile';
 
 export const getProfile = async (req: AuthRequest, res: Response) => {
   try {
-    const member = await Member.findById(req.user?.id);
-    if (!member) {
-      return res.status(404).json({ success: false, message: 'Member not found' });
+    const memberId = req.user?.id;
+    // Find or create profile (Lazy Initialization)
+    let profile = await Profile.findOne({ memberId });
+    
+    if (!profile) {
+      profile = await Profile.create({ 
+        memberId,
+        preferences: {
+          marketingEmails: false,
+          smsNotifications: true
+        }
+      });
     }
-    return res.status(200).json({ success: true, data: member });
+    
+    return res.status(200).json({ success: true, data: profile });
   } catch (error) {
-    return res.status(500).json({ success: false, message: 'Server error' });
+    console.error('Get Profile Error:', error);
+    return res.status(500).json({ success: false, message: 'Server error retrieving profile' });
   }
 };
 
 export const updateProfile = async (req: AuthRequest, res: Response) => {
   try {
-    const { name, email, mobile } = req.body;
+    const memberId = req.user?.id;
+    const { name, email, bio, preferences } = req.body;
     
-    // Check if new email/mobile is already taken
-    if (email) {
-      const existing = await Member.findOne({ email, _id: { $ne: req.user?.id } });
-      if (existing) return res.status(400).json({ success: false, message: 'Email already in use' });
+    // Simple validation
+    if (email && !/\S+@\S+\.\S+/.test(email)) {
+      return res.status(400).json({ success: false, message: 'Invalid email format' });
     }
 
-    const updatedMember = await Member.findByIdAndUpdate(
-      req.user?.id,
-      { $set: { name, email, mobile } },
-      { new: true, runValidators: true }
+    if (bio && bio.length > 500) {
+      return res.status(400).json({ success: false, message: 'Bio is too long (max 500 chars)' });
+    }
+
+    // Security check: ensure email uniqueness if provided
+    if (email) {
+      const existing = await Profile.findOne({ email, memberId: { $ne: memberId } });
+      if (existing) {
+        return res.status(400).json({ success: false, message: 'Email address already in use' });
+      }
+    }
+
+    // Build update object to support partial nested updates for preferences
+    const updateData: any = {};
+    if (name !== undefined) updateData.name = name;
+    if (email !== undefined) updateData.email = email;
+    if (bio !== undefined) updateData.bio = bio;
+    
+    if (preferences) {
+      if (preferences.marketingEmails !== undefined) {
+        updateData['preferences.marketingEmails'] = preferences.marketingEmails;
+      }
+      if (preferences.smsNotifications !== undefined) {
+        updateData['preferences.smsNotifications'] = preferences.smsNotifications;
+      }
+    }
+
+    const profile = await Profile.findOneAndUpdate(
+      { memberId },
+      { $set: updateData },
+      { new: true, upsert: true, runValidators: true }
     );
 
     return res.status(200).json({
       success: true,
       message: 'Profile updated successfully',
-      data: updatedMember
+      data: profile
     });
   } catch (error) {
+    console.error('Update Profile Error:', error);
     return res.status(500).json({ success: false, message: 'Failed to update profile' });
   }
 };

@@ -8,6 +8,18 @@ export interface User {
   createdAt: string;
 }
 
+export interface UserPreferences {
+  marketingEmails: boolean;
+  smsNotifications: boolean;
+}
+
+export interface ProfileData {
+  name: string;
+  email: string;
+  bio: string;
+  preferences: UserPreferences;
+}
+
 export interface AuthState {
   user: User | null;
   isAuthenticated: boolean;

@@ -4,38 +4,35 @@ const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const cookieParser = require('cookie-parser');
-const authRoutes = require('./routes/authRoutes');
-const profileRoutes = require('./routes/profileRoutes');
+
+// Use relative paths correctly
+const authRoutes = require('./routes/authRoutes').default;
+const profileRoutes = require('./routes/profileRoutes').default;
 
 const app = express();
 
-// Security Middlewares
 app.use(helmet());
 app.use(cookieParser());
 app.use(express.json());
 
-// CORS Config
 app.use(cors({
-  origin: process.env.CLIENT_URL,
+  origin: process.env.CLIENT_URL || 'http://localhost:5173',
   credentials: true,
 }));
 
-// Rate Limiting (IP-based)
 const limiter = rateLimit({
-  windowMs: 60 * 60 * 1000,
+  windowMs: 15 * 60 * 1000,
   max: 100,
-  message: 'Too many requests from this IP',
+  message: 'Too many requests from this IP'
 });
 app.use('/api/', limiter);
 
-// Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/profile', profileRoutes);
 
-// Error Handling
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  res.status(500).json({ success: false, message: 'Something went wrong!' });
+  res.status(500).json({ success: false, message: 'Global error handler caught an exception' });
 });
 
 module.exports = app;
